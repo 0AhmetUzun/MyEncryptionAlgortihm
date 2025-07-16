@@ -8,29 +8,27 @@ namespace EncryptionAlgorithm
     internal class Program
     {
         static Dictionary<char, char> encryptionMap;
+        static string currentUsername;
 
         static void Main()
         {
-            Console.OutputEncoding = Encoding.UTF8; 
-            Console.Write("Enter username: ");
-            string username = Console.ReadLine();
+            Console.OutputEncoding = Encoding.UTF8;
 
-            encryptionMap = CreateMap(username);
+            Console.Write("Enter initial username: ");
+            currentUsername = Console.ReadLine();
+
+            encryptionMap = CreateMap(currentUsername);
 
             while (true)
             {
                 Console.WriteLine("Choose an option:");
                 Console.WriteLine("1 - Encode");
                 Console.WriteLine("2 - Decode");
-                Console.WriteLine("3 - Exit");
+                Console.WriteLine("3 - Show Mapping Table");
+                Console.WriteLine("4 - Change Username");
+                Console.WriteLine("5 - Exit");                
 
                 string choice = Console.ReadLine();
-
-                if (choice == "3")
-                {
-                    Console.WriteLine("Exitting...");
-                    break;
-                }
 
                 if (choice == "1")
                 {
@@ -46,9 +44,25 @@ namespace EncryptionAlgorithm
                     string decoded = Decode(hexInput);
                     Console.WriteLine("Decoded result: " + decoded);
                 }
+                else if (choice == "3")
+                {
+                    PrintMap();
+                }
+                else if (choice == "4")
+                {
+                    Console.Write("Enter new username: ");
+                    currentUsername = Console.ReadLine();
+                    encryptionMap = CreateMap(currentUsername);
+                    Console.WriteLine("Username changed and new encryption map generated.");
+                }
+                else if (choice == "5")
+                {
+                    Console.WriteLine("Exiting...");
+                    return;
+                }
                 else
                 {
-                    Console.WriteLine("Invalid option.Please try again");
+                    Console.WriteLine("Invalid option. Please try again.");
                 }
             }
         }
@@ -56,23 +70,27 @@ namespace EncryptionAlgorithm
         static Dictionary<char, char> CreateMap(string key)
         {
             string source = key.ToUpper();
-            string alphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ";
 
-            List<char> letters = new List<char>(alphabet);
-            int seed = source.GetHashCode();
-            Random rnd = new Random(seed);
-            
-            //Fisher Yates Shuffle
-            for (int i = letters.Count - 1; i > 0; i--)  
+            string letters = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ";
+            string symbols = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+            string full = letters + symbols;
+
+            List<char> original = new List<char>(full);
+            List<char> shuffled = new List<char>(original);
+
+            Random rnd = new Random(source.GetHashCode());
+
+            //Fisher-Yates Shuffle
+            for (int i = shuffled.Count - 1; i > 0; i--)
             {
                 int j = rnd.Next(i + 1);
-                (letters[i], letters[j]) = (letters[j], letters[i]);
+                (shuffled[i], shuffled[j]) = (shuffled[j], shuffled[i]);
             }
 
             Dictionary<char, char> map = new Dictionary<char, char>();
-            for (int i = 0; i < alphabet.Length; i++)
+            for (int i = 0; i < original.Count; i++)
             {
-                map[alphabet[i]] = letters[i];
+                map[original[i]] = shuffled[i];
             }
 
             return map;
@@ -97,7 +115,7 @@ namespace EncryptionAlgorithm
                 byte[] bytes = Encoding.UTF8.GetBytes(mappedChar.ToString());
                 foreach (byte b in bytes)
                 {
-                    hexList.Add(b.ToString("X2")); 
+                    hexList.Add(b.ToString("X2"));
                 }
             }
 
@@ -150,13 +168,21 @@ namespace EncryptionAlgorithm
 
         static char DecodeChar(char encodedChar)
         {
+            foreach (var keyValue in encryptionMap)
+            {
+                if (keyValue.Value == encodedChar)
+                    return keyValue.Key;
+            }
+            return encodedChar;
+        }
+
+        static void PrintMap()
+        {
+            Console.WriteLine($"\n--- Character Mapping Table for '{currentUsername}' ---");
             foreach (var kvp in encryptionMap)
             {
-                if (kvp.Value == encodedChar)
-                    return kvp.Key;
+                Console.WriteLine($"{kvp.Key} → {kvp.Value}");
             }
-
-            return encodedChar;
         }
     }
 }
