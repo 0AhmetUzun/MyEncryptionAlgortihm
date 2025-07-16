@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
 
-namespace EncryptionAlgorithm_ASCII
+namespace EncryptionAlgorithm
 {
     internal class Program
     {
@@ -9,6 +11,7 @@ namespace EncryptionAlgorithm_ASCII
 
         static void Main()
         {
+            Console.OutputEncoding = Encoding.UTF8; 
             Console.Write("Enter username: ");
             string username = Console.ReadLine();
 
@@ -16,36 +19,36 @@ namespace EncryptionAlgorithm_ASCII
 
             while (true)
             {
-                Console.WriteLine("Choose an operation:");
-                Console.WriteLine("1 - Encode to ASCII");
-                Console.WriteLine("2 - Decode from ASCII");
+                Console.WriteLine("Choose an option:");
+                Console.WriteLine("1 - Encode");
+                Console.WriteLine("2 - Decode");
                 Console.WriteLine("3 - Exit");
 
                 string choice = Console.ReadLine();
 
                 if (choice == "3")
                 {
-                    Console.WriteLine("Exiting program...");
+                    Console.WriteLine("Exitting...");
                     break;
                 }
 
                 if (choice == "1")
                 {
-                    Console.Write("Enter text to encode: ");
+                    Console.Write("Text to encode: ");
                     string input = Console.ReadLine();
-                    string encoded = EncodeToAscii(input);
-                    Console.WriteLine("ASCII Encoded: " + encoded);
+                    string encoded = Encode(input);
+                    Console.WriteLine("Encoded result: " + encoded);
                 }
                 else if (choice == "2")
                 {
-                    Console.Write("Enter ASCII values: ");
-                    string asciiInput = Console.ReadLine();
-                    string decoded = DecodeFromAscii(asciiInput);
-                    Console.WriteLine("Decoded Result: " + decoded);
+                    Console.Write("Text to decode: ");
+                    string hexInput = Console.ReadLine();
+                    string decoded = Decode(hexInput);
+                    Console.WriteLine("Decoded result: " + decoded);
                 }
                 else
                 {
-                    Console.WriteLine("Invalid selection.Please try again.");
+                    Console.WriteLine("Invalid option.Please try again");
                 }
             }
         }
@@ -53,109 +56,92 @@ namespace EncryptionAlgorithm_ASCII
         static Dictionary<char, char> CreateMap(string key)
         {
             string source = key.ToUpper();
-            List<char> letters = new List<char>();
+            string alphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ";
 
-            for (char ch = 'A'; ch <= 'Z'; ch++)
-            {
-                letters.Add(ch);
-            }
-
+            List<char> letters = new List<char>(alphabet);
             int seed = source.GetHashCode();
             Random rnd = new Random(seed);
-
-            for (int i = letters.Count - 1; i > 0; i--)
+            
+            //Fisher Yates Shuffle
+            for (int i = letters.Count - 1; i > 0; i--)  
             {
                 int j = rnd.Next(i + 1);
                 (letters[i], letters[j]) = (letters[j], letters[i]);
             }
 
             Dictionary<char, char> map = new Dictionary<char, char>();
-            for (int i = 0; i < 26; i++)
+            for (int i = 0; i < alphabet.Length; i++)
             {
-                map[(char)('A' + i)] = letters[i];
+                map[alphabet[i]] = letters[i];
             }
 
             return map;
         }
 
-        static string EncodeToAscii(string input)
+        static string Encode(string input)
         {
-            List<string> asciiList = new List<string>();
+            List<string> hexList = new List<string>();
 
             foreach (char ch in input)
             {
-                if (char.IsLetter(ch)) 
+                char mappedChar = ch;
+                char upperCh = char.ToUpper(ch);
+
+                if (encryptionMap.ContainsKey(upperCh))
                 {
-                    if (char.IsLower(ch)) 
-                    {
-                        char upperCh = char.ToUpper(ch); 
-                        if (encryptionMap.ContainsKey(upperCh)) 
-                        {
-                            char mappedCh = encryptionMap[upperCh]; 
-                            char finalCh = char.ToLower(mappedCh); 
-                            asciiList.Add(((int)finalCh).ToString()); 
-                        }
-                        else 
-                        {
-                            char finalCh = char.ToLower(upperCh); 
-                            asciiList.Add(((int)finalCh).ToString());
-                        }
-                    }
-                    else
-                    {
-                        if (encryptionMap.ContainsKey(ch)) 
-                        {
-                            char mappedCh = encryptionMap[ch]; 
-                            asciiList.Add(((int)mappedCh).ToString()); 
-                        }
-                        else 
-                        {
-                            asciiList.Add(((int)ch).ToString()); 
-                        }
-                    }
+                    mappedChar = encryptionMap[upperCh];
+                    if (char.IsLower(ch))
+                        mappedChar = char.ToLower(mappedChar);
                 }
-                else 
+
+                byte[] bytes = Encoding.UTF8.GetBytes(mappedChar.ToString());
+                foreach (byte b in bytes)
                 {
-                    asciiList.Add(((int)ch).ToString());
+                    hexList.Add(b.ToString("X2"));
                 }
             }
 
-            return string.Join(" ", asciiList);
+            return string.Join("", hexList);
         }
 
-        static string DecodeFromAscii(string asciiText)
+        static string Decode(string hexText)
         {
-            string[] asciiValues = asciiText.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            List<byte> byteList = new List<byte>();
+
+            for (int i = 0; i < hexText.Length; i += 2)
+            {
+                string hexPair = hexText.Substring(i, 2);
+                if (byte.TryParse(hexPair, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte b))
+                {
+                    byteList.Add(b);
+                }
+            }
+
+            string decoded = Encoding.UTF8.GetString(byteList.ToArray());
             string result = "";
 
-            foreach (string val in asciiValues)
+            foreach (char ch in decoded)
             {
-                if (int.TryParse(val, out int ascii))
-                {
-                    char ch = (char)ascii;
+                char upperCh = char.ToUpper(ch);
+                bool isLower = char.IsLower(ch);
+                char original;
 
-                    if (char.IsLetter(ch))
-                    {
-                        bool isLower = char.IsLower(ch);
-                        char upperCh = char.ToUpper(ch);
-                        char originalCh = DecodeChar(upperCh);
-                        if (isLower)
-                        {
-                            result += char.ToLower(originalCh);
-                        }
-                        else
-                        {
-                            result += originalCh;
-                        }
-                    }
-                    else
-                    {
-                        result += ch;
-                    }
+                if (encryptionMap.ContainsValue(upperCh))
+                {
+                    original = DecodeChar(upperCh);
                 }
                 else
                 {
-                    result += "?"; 
+                    original = ch;
+                }
+
+                if (isLower)
+                {
+                    result += char.ToLower(original);
+                }
+                else
+                {
+                    result += original;
                 }
             }
 
@@ -164,12 +150,10 @@ namespace EncryptionAlgorithm_ASCII
 
         static char DecodeChar(char encodedChar)
         {
-            foreach (var number in encryptionMap)
+            foreach (var kvp in encryptionMap)
             {
-                if (number.Value == encodedChar)
-                {
-                    return number.Key;
-                }
+                if (kvp.Value == encodedChar)
+                    return kvp.Key;
             }
 
             return encodedChar;
