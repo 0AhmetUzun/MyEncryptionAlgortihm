@@ -97,7 +97,7 @@ namespace EncryptionAlgorithm
                 byte[] bytes = Encoding.UTF8.GetBytes(mappedChar.ToString());
                 foreach (byte b in bytes)
                 {
-                    hexList.Add(b.ToString("X2"));
+                    hexList.Add(b.ToString("X2")); 
                 }
             }
 
