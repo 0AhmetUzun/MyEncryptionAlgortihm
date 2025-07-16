@@ -27,59 +27,68 @@ namespace EncryptionAlgorithm
 
                 string choice = Console.ReadLine();
 
-                if (choice == "4")
+                switch (choice)
                 {
-                    Console.WriteLine("Exiting...");
-                    break;
-                }
+                    case "1":
+                        Console.Write("Text to encode: ");
+                        string input = Console.ReadLine();
+                        Console.WriteLine("Encoded result: " + Encode(input));
+                        break;
 
-                if (choice == "1")
-                {
-                    Console.Write("Text to encode: ");
-                    string input = Console.ReadLine();
-                    string encoded = Encode(input);
-                    Console.WriteLine("Encoded result: " + encoded);
-                }
-                else if (choice == "2")
-                {
-                    Console.Write("Text to decode: ");
-                    string hexInput = Console.ReadLine();
-                    string decoded = Decode(hexInput);
-                    Console.WriteLine("Decoded result: " + decoded);
-                }
-                else if (choice == "3")
-                {
-                    Console.Write("Enter new username: ");
-                    string newUsername = Console.ReadLine();
-                    encryptionMap = CreateMap(newUsername);
-                    Console.WriteLine("Map updated with new username.");
-                }
-                else
-                {
-                    Console.WriteLine("Invalid option. Please try again.");
+                    case "2":
+                        Console.Write("Text to decode: ");
+                        string hexInput = Console.ReadLine();
+                        Console.WriteLine("Decoded result: " + Decode(hexInput));
+                        break;
+
+                    case "3":
+                        Console.Write("Enter new username: ");
+                        string newUsername = Console.ReadLine();
+                        encryptionMap = CreateMap(newUsername);
+                        Console.WriteLine("Map updated with new username.");
+                        break;
+
+                    case "4":
+                        Console.WriteLine("Exiting...");
+                        return;
+
+                    default:
+                        Console.WriteLine("Invalid option. Please try again.");
+                        break;
                 }
             }
         }
 
         static Dictionary<char, char> CreateMap(string key)
         {
-            string source = key.ToUpper();
-            string alphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ";
+            string seedKey = key.ToUpperInvariant();
 
-            List<char> letters = new List<char>(alphabet);
-            int seed = source.GetHashCode();
-            Random rnd = new Random(seed);
+            string baseChars =
+                "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ" +    
+                "abcçdefgğhiıijklmnoöprsştuüvyz" +    
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +       
+                "abcdefghijklmnopqrstuvwxyz" +       
+                "0123456789" +                        
+                "!@#$%^&*()_-+=[]{}|:;'<>,.?/~`\\\""; 
 
-            for (int i = letters.Count - 1; i > 0; i--)
+            List<char> originalSet = new List<char>();
+            foreach (char ch in baseChars)
+                if (!originalSet.Contains(ch))
+                    originalSet.Add(ch);
+
+            List<char> shuffledSet = new List<char>(originalSet);
+
+            Random rnd = new Random(seedKey.GetHashCode());
+            for (int i = shuffledSet.Count - 1; i > 0; i--)
             {
                 int j = rnd.Next(i + 1);
-                (letters[i], letters[j]) = (letters[j], letters[i]);
+                (shuffledSet[i], shuffledSet[j]) = (shuffledSet[j], shuffledSet[i]);
             }
 
             Dictionary<char, char> map = new Dictionary<char, char>();
-            for (int i = 0; i < alphabet.Length; i++)
+            for (int i = 0; i < originalSet.Count; i++)
             {
-                map[alphabet[i]] = letters[i];
+                map[originalSet[i]] = shuffledSet[i];
             }
 
             return map;
@@ -91,16 +100,7 @@ namespace EncryptionAlgorithm
 
             foreach (char ch in input)
             {
-                char mappedChar = ch;
-                char upperCh = char.ToUpper(ch);
-
-                if (encryptionMap.ContainsKey(upperCh))
-                {
-                    mappedChar = encryptionMap[upperCh];
-                    if (char.IsLower(ch))
-                        mappedChar = char.ToLower(mappedChar);
-                }
-
+                char mappedChar = encryptionMap.ContainsKey(ch) ? encryptionMap[ch] : ch;
                 byte[] bytes = Encoding.UTF8.GetBytes(mappedChar.ToString());
                 foreach (byte b in bytes)
                 {
@@ -125,27 +125,15 @@ namespace EncryptionAlgorithm
             }
 
             string decoded = Encoding.UTF8.GetString(byteList.ToArray());
-            string result = "";
+            StringBuilder result = new StringBuilder();
 
             foreach (char ch in decoded)
             {
-                char upperCh = char.ToUpper(ch);
-                bool isLower = char.IsLower(ch);
-                char original;
-
-                if (encryptionMap.ContainsValue(upperCh))
-                {
-                    original = DecodeChar(upperCh);
-                }
-                else
-                {
-                    original = ch;
-                }
-
-                result += isLower ? char.ToLower(original) : original;
+                char original = DecodeChar(ch);
+                result.Append(original);
             }
 
-            return result;
+            return result.ToString();
         }
 
         static char DecodeChar(char encodedChar)
@@ -155,7 +143,6 @@ namespace EncryptionAlgorithm
                 if (kv.Value == encodedChar)
                     return kv.Key;
             }
-
             return encodedChar;
         }
     }
